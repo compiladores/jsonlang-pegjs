@@ -1,55 +1,205 @@
-// -- SYNTAX --
-// Program is the root of the Grammar.
-
-{
-  function removeEscapedChars(text) {
-    let newString = ""
-    for (const char of text) {
-      if (char !== '\"') newString += char;
-    }
-    return newString;
+{{
+  function filledArray(count, value) {
+    return Array.apply(null, new Array(count))
+      .map(function() { return value; });
   }
+  function extractOptional(optional, index) {
+    return optional ? optional[index] : null;
+  }
+  function extractList(list, index) {
+    return list.map(function(element) { return element[index]; });
+  }
+  function buildList(head, tail, index) {
+    return [head].concat(extractList(tail, index));
+  }
+  function optionalList(value) {
+    return value !== null ? value : [];
+  }
+  function getCorrectTypeName(type) {
+  	switch (type) {
+    	case '[]': 
+        	return "array"
+        case '{}':
+        	return "dictionary"
+        default:
+        	return type
+    }
+  }
+}}
+
+Start = __ program:Program __ { return program; }
+  
+Program = body:SourceElements? {
+      return {
+        type: "Program",
+        body: optionalList(body)
+      };
+    }
+    
+SourceElements
+  = head:SourceElement tail:(__ SourceElement)* {
+      return buildList(head, tail, 1);
+    }
+
+SourceElement = Statement
+
+Statement = 
+ 		Block
+        / AssignmentStatement
+		/ EmptyStatement
+       
+
+Block
+  = "{" __ body:(StatementList __)? "}" {
+      return {
+        type: "BlockStatement",
+        body: optionalList(extractOptional(body, 0))
+      };
+    }
+    
+AssignmentStatement
+  = type:TypeToken __ Identifier __ "=" __ exp: Expression EOS {
+      return {
+        type: getCorrectTypeName(type),
+        value: exp
+      };
+    }
+    
+TypeToken = 'int' / 'string' / '[]' / '{}'
+EmptyStatement = ";" { return { type: "EmptyStatement" }; }
+
+StatementList
+  = head:Statement tail:(__ Statement)* { return buildList(head, tail, 1); }
+  
+  
+// EXPRESSIONS
+Expression
+	= argl:Term _ op:Operator _ argr:Expression { return {op, argl, argr} }
+    / a:Term? { return a }
+    
+Term 
+    = SingleLiteral
+    / GroupLiteral
+    / Parenthetical
+    / Identifier
+    
+Parenthetical "Parenthetical" = '(' e:Expression ')' { return e }
+
+Operator
+    = '+' 
+    / '*' 
+    / '-' 
+    / '/' 
+    / '%' 
+    / '&&' 
+    / '||' 
+    / '='
+    / '!='
+
+// LITERALS
+AllLiterals = SingleLiteral / GroupLiteral
+SingleLiteral = Number / StringLiteral
+GroupLiteral = ArrayLiteral / DictionaryLiteral
+
+
+// LITERALS - DICTIONARY
+DictionaryLiteral = "{" __ pairs:KeyValueList __ "}" {
+	return { 
+    	type: 'object',
+        values: pairs
+    }
 }
 
-Program = statements: StatementList? _ { return statements }
+KeyValueList
+  = head:PairKeyValue tail:(__ "," __ PairKeyValue)* {
+      return buildList(head, tail, 3);
+    }
+    
+PairKeyValue
+	= key: StringLiteral __ ":" __ value: AllLiterals
 
-StatementList  = statements:(_ Statement / _ ';' )*
-                       { return statements.filter((stmt) => stmt[1] !== ';').map((stmt) => stmt[1]) }
-
-Statement = Expression
-
-Expression = Assignment
-
-Assignment = IntAssignment / StringAssignment
-
-IntAssignment = 'int' __ key: Identifier _ '=' _ value:Number {
-  return { int: key, value }
+// LITERALS - ARRAY
+ArrayLiteral = "[" __ arr:ElementList __ "]" {
+	return { arr }
 }
 
-StringAssignment = 'string' __ key: Identifier _ '=' _ value:String {
-  return { string: key, value }
-}
+ElementList
+  = head:(
+      elision:(Elision __)? element:SingleLiteral {
+        return optionalList(extractOptional(elision, 0)).concat(element);
+      }
+    )
+    tail:(
+      __ "," __ elision:(Elision __)? element:SingleLiteral {
+        return optionalList(extractOptional(elision, 0)).concat(element);
+      }
+    )*
+    { return Array.prototype.concat.apply(head, tail); }
 
-Identifier = ! (ReservedWord Alone) IdentifierStart IdentifierPart*
-                   { return text() }
-IdentifierStart = [$_a-zA-Z]
-IdentifierPart  = [$_a-zA-Z0-9]
+Elision
+  = "," commas:(__ ",")* { return filledArray(commas.length + 1, null); }
 
-Number = [0-9]* { return parseInt(text()) }
-String = '"' str: Identifier '"' { return removeEscapedChars(text()) }
+// LITERALS - STRING
+StringLiteral "string"
+  = '"' chars:DoubleStringCharacter* '"' {
+      return chars.join("");
+    }
+  / "'" chars:SingleStringCharacter* "'" {
+      return { type: "Literal", value: chars.join("") };
+    }
 
-Alone = ! IdentifierPart
+DoubleStringCharacter
+  = !('"' / "\\" / LineTerminator) SourceCharacter { return text(); }
+  / "\\" sequence:EscapeSequence { return sequence; }
+  / LineContinuation
 
-ReservedWord = 
-              / 'null' / 'true' / 'false' /
-              / 'div' / 'mod' / 'and' / 'or' / 'not'
-              / 'if' / 'then' / 'else' / 'select' / 'when' / 'otherwise'
-              / 'for' / 'from' / 'down' / 'to' /
-              / 'while' / 'until' / 'continue' / 'break' / 'return'
+SingleStringCharacter
+  = !("'" / "\\" / LineTerminator) SourceCharacter { return text(); }
+  / "\\" sequence:EscapeSequence { return sequence; }
+  / LineContinuation
 
-Comment       = (LineComment / BlockComment) { return {} }
-LineComment  = '//' [^\n\r]* [\n\r]*
-BlockComment = '/*' (!'*/' .)* '*/'
 
-_       = ([ \t\n\r] / Comment)* { return {} }
-__      = ([ \t\n\r] / Comment)+ { return {} }
+//ESCAPE CHARS
+EscapeSequence
+  = CharacterEscapeSequence
+  / "0" !"." { return "\0"; }
+
+CharacterEscapeSequence
+  = SingleEscapeCharacter
+  / NonEscapeCharacter
+
+SingleEscapeCharacter
+  = "'"
+  / '"'
+  / "\\"
+  / "b"  { return "\b"; }
+  / "f"  { return "\f"; }
+  / "n"  { return "\n"; }
+  / "r"  { return "\r"; }
+  / "t"  { return "\t"; }
+  / "v"  { return "\v"; }
+  
+LineContinuation
+  = "\\" LineTerminatorSequence { return ""; }
+
+NonEscapeCharacter
+  = !(EscapeCharacter / LineTerminator) SourceCharacter { return text(); }
+
+EscapeCharacter
+  = SingleEscapeCharacter
+  / "."
+  / "x"
+  / "u"
+ 
+// AUX
+WhiteSpace "whitespace" = "\t" / "\v" / "\f" / " " / "\u00A0"/ "\uFEFF"
+LineTerminator= [\n\r\u2028\u2029]
+LineTerminatorSequence "end of line" = "\n" / "\r\n" / "\r" / "\u2028"/ "\u2029"
+Number "Number" = n:[0-9]+ { return n.join('') }
+Identifier "Identifier" = n:[a-zA-Z?]+ { return n.join('') }
+Terminator "Terminator" = LineTerminator / ';'
+SourceCharacter = .
+_ = (WhiteSpace)*
+__ = (WhiteSpace / LineTerminatorSequence)*
+EOS = __ ";" / _ LineTerminatorSequence / _ &"}" / __ EOF
+EOF = !.
