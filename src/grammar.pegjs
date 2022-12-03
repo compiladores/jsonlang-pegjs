@@ -41,16 +41,18 @@ SourceElements
       return buildList(head, tail, 1);
     }
 
-SourceElement = Statement
+SourceElement = Statement / Function
 
-Statement = 
- 		Block
-        / AssignmentStatement
-		/ EmptyStatement
-       
+Statement
+	= Block
+    / AssignmentStatement
+    / EmptyStatement
+    / FunctionExpression
+    / IfStatement
+   
 
 Block
-  = "{" __ body:(StatementList __)? "}" {
+  = "<" __ body:(StatementList __)? ">" {
       return {
         type: "BlockStatement",
         body: optionalList(extractOptional(body, 0))
@@ -58,25 +60,84 @@ Block
     }
     
 AssignmentStatement
-  = type:TypeToken __ Identifier __ "=" __ exp: Expression EOS {
+  = type:TypeToken __ id:Identifier __ "=" __ exp: Expression EOS {
       return {
         type: getCorrectTypeName(type),
+        id: id,
         value: exp
       };
     }
     
-TypeToken = 'int' / 'string' / '[]' / '{}'
+TypeToken = 'var' / 'const'
 EmptyStatement = ";" { return { type: "EmptyStatement" }; }
 
 StatementList
   = head:Statement tail:(__ Statement)* { return buildList(head, tail, 1); }
-  
-  
-// EXPRESSIONS
-Expression
-	= argl:Term _ op:Operator _ argr:Expression { return {op, argl, argr} }
-    / a:Term? { return a }
     
+// --------------------------- --------------- IF -----------------------------------------    
+IfStatement
+  = 'if' __ "(" __ cond:Expression __ ")" __
+    next:Statement __
+    'else' __
+    elseStmt:Statement
+    {
+      return {
+        type: "IfElse",
+        condition: cond,
+        next: next,
+        elseStmt: elseStmt
+      };
+    }
+  / 'if' __ "(" __ cond:Expression __ ")" __
+    next:Statement {
+      return {
+        type: "If",
+        cond: cond,
+        next: next,
+        alternate: null
+      };
+    }
+
+    
+// ------------------- -------------------  FUNCTIONS ------------------- ------------------- 
+Function
+  = 'fn' __ id:Identifier __
+    "(" __ params:(FunctionParams __)? ")" __
+    "<" __ body:FunctionBody __ ">"
+    {
+      return {
+        type: "function",
+        id: id[0],
+        params: optionalList(extractOptional(params, 0)),
+        body: body
+      };
+    }
+ 
+FunctionParams
+	= first: Identifier following:(__ "," __ Identifier)* {
+    	return buildList(first, following, 3);
+    }
+
+FunctionBody 
+	= body: SourceElements? {
+    	return {
+        	type: "FunctionBody",
+            body: optionalList(body)
+        }
+    }
+ 
+FunctionExpression 
+	= id:Identifier __  "(" __ ")" __ EOS {
+    	return { type: 'FunctionCall', call: id }
+    }
+    
+// ------------------- -------------------  EXPRESSIONS ------------------- ------------------- 
+Expression
+	= argl:Term _ op:BinOperator _ argr:Expression { return {op, argl, argr} }
+    / op:UnOperator _ arg:Term _  { return {op, arg} }
+    / f:FunctionExpression { return f } 
+    / a:Term? { return a }
+     
 Term 
     = SingleLiteral
     / GroupLiteral
@@ -85,7 +146,7 @@ Term
     
 Parenthetical "Parenthetical" = '(' e:Expression ')' { return e }
 
-Operator
+BinOperator
     = '+' 
     / '*' 
     / '-' 
@@ -95,20 +156,32 @@ Operator
     / '||' 
     / '='
     / '!='
+    
+ UnOperator
+ 	= '-' { return 'neg' }
 
-// LITERALS
+// ------------------- -------------------  LITERALS ------------------- ------------------- 
 AllLiterals = SingleLiteral / GroupLiteral
-SingleLiteral = Number / StringLiteral
+SingleLiteral 
+	= Number 
+    / StringLiteral 
+    /  BooleanLiteral
 GroupLiteral = ArrayLiteral / DictionaryLiteral
 
+//------------------- ------------------- LITERALS - BOOLEANS ------------------- ------------------- 
+BooleanLiteral 
+	= 'true' { return true }
+    / 'false' { return false }
 
-// LITERALS - DICTIONARY
-DictionaryLiteral = "{" __ pairs:KeyValueList __ "}" {
-	return { 
-    	type: 'object',
-        values: pairs
+//------------------- ------------------- LITERALS - DICTIONARY ------------------- ------------------- 
+DictionaryLiteral 
+	= "{" __ pairs:KeyValueList __ "}" {
+		return { 
+    		type: 'object',
+        	values: pairs
+    	}
     }
-}
+    / "{" __ "}" { return { type: "Dictionary", pairs: [] }}
 
 KeyValueList
   = head:PairKeyValue tail:(__ "," __ PairKeyValue)* {
@@ -116,9 +189,9 @@ KeyValueList
     }
     
 PairKeyValue
-	= key: StringLiteral __ ":" __ value: AllLiterals
+	= key: StringLiteral __ ":" __ value: AllLiterals { return {key, value} }
 
-// LITERALS - ARRAY
+// ------------------- -------------------  LITERALS - ARRAY ------------------- ------------------- 
 ArrayLiteral = "[" __ arr:ElementList __ "]" {
 	return { arr }
 }
@@ -139,7 +212,7 @@ ElementList
 Elision
   = "," commas:(__ ",")* { return filledArray(commas.length + 1, null); }
 
-// LITERALS - STRING
+// ------------------- -------------------  LITERALS - STRING ------------------- ------------------- 
 StringLiteral "string"
   = '"' chars:DoubleStringCharacter* '"' {
       return chars.join("");
@@ -159,7 +232,7 @@ SingleStringCharacter
   / LineContinuation
 
 
-//ESCAPE CHARS
+//------------------- -------------------  ESCAPE CHARS ------------------- ------------------- 
 EscapeSequence
   = CharacterEscapeSequence
   / "0" !"." { return "\0"; }
@@ -191,7 +264,7 @@ EscapeCharacter
   / "x"
   / "u"
  
-// AUX
+// ------------------- ------------------- AUX ------------------- ------------------- 
 WhiteSpace "whitespace" = "\t" / "\v" / "\f" / " " / "\u00A0"/ "\uFEFF"
 LineTerminator= [\n\r\u2028\u2029]
 LineTerminatorSequence "end of line" = "\n" / "\r\n" / "\r" / "\u2028"/ "\u2029"
