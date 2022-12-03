@@ -60,7 +60,14 @@ Block
     }
     
 AssignmentStatement
-  = type:TypeToken __ id:Identifier __ "=" __ exp: Expression EOS {
+	= type: TypeToken __ id: Identifier __ "=" __ str: StringLiteral {
+      return {
+        type: getCorrectTypeName(type),
+        id: id,
+        value: str
+      };
+    }
+    / type:TypeToken __ id:Identifier __ "=" __ exp: Expression EOS {
       return {
         type: getCorrectTypeName(type),
         id: id,
@@ -269,7 +276,11 @@ WhiteSpace "whitespace" = "\t" / "\v" / "\f" / " " / "\u00A0"/ "\uFEFF"
 LineTerminator= [\n\r\u2028\u2029]
 LineTerminatorSequence "end of line" = "\n" / "\r\n" / "\r" / "\u2028"/ "\u2029"
 Number "Number" = n:[0-9]+ { return n.join('') }
-Identifier "Identifier" = n:[a-zA-Z?]+ { return n.join('') }
+Identifier "Identifier" = !ReservedWord n:[a-zA-Z?]+ { return n.join('') }
+ReservedWord 
+	= 'break' / 'false' / 'true' / 'while' / 'if' 
+    / 'for' / 'var' / 'const' / 'continue' / 'return'
+    / 'function' / 'print'
 Terminator "Terminator" = LineTerminator / ';'
 SourceCharacter = .
 _ = (WhiteSpace)*
