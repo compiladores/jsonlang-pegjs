@@ -217,6 +217,13 @@ describe('Binops test', () => {
     expect(res).toStrictEqual(resObject);
   })
 
+  test('Compare bool values with non bool', async () =>  {        
+    await expect(testGrammar('v x = false ?= 5;'))
+    .rejects
+    .toThrow('ERROR: Invalid comparison');
+  });
+
+
   test('Compare integer values', async () => {
     const res = await testGrammar('v x = 1 ?= 1;');
 
@@ -232,6 +239,19 @@ describe('Binops test', () => {
     ]
     expect(res).toStrictEqual(resObject);
   })
+
+  test('Compare integer values with non integer', async () =>  {        
+    await expect(testGrammar('v x = [1,2,3] ?= 5;'))
+    .rejects
+    .toThrow('ERROR: Invalid comparison');
+  });
+
+
+  test('Compare bool values with non bool', async () =>  {        
+    await expect(testGrammar('v x = false ?= 5;'))
+    .rejects
+    .toThrow('ERROR: Invalid comparison');
+  });
 
   test('Compare string values', async () => {
     const res = await testGrammar('v x = "String" ?= "Otro";');
@@ -249,6 +269,12 @@ describe('Binops test', () => {
     expect(res).toStrictEqual(resObject);
   })
 
+  test('Compare string values with non string', async () =>  {        
+    await expect(testGrammar('v x = "string" ?= 5;'))
+    .rejects
+    .toThrow('ERROR: Invalid comparison');
+  });
+
   test('Compare array values', async () => {
     const res = await testGrammar('v x = [1,2,3] ?= [1,2,3,4];');
 
@@ -264,6 +290,12 @@ describe('Binops test', () => {
     ]
     expect(res).toStrictEqual(resObject);
   })
+
+  test('Compare array values with non array', async () =>  {        
+    await expect(testGrammar('v x = [1,2,3] ?= 5;'))
+    .rejects
+    .toThrow('ERROR: Invalid comparison');
+  });
 
   test('Compare dictionaries values', async () => {
     const res = await testGrammar('v x = {"Hola": 1} ?= {"Hola": 1}');
@@ -290,4 +322,10 @@ describe('Binops test', () => {
     ]
     expect(res).toStrictEqual(resObject);
   })
+
+  test('Compare dictionary with non dictionary', async () =>  {        
+    await expect(testGrammar('v x = {"Hola":1} ?= 5;'))
+    .rejects
+    .toThrow('ERROR: Invalid comparison');
+  });
 });

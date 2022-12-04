@@ -151,9 +151,16 @@ Expression
 // ------------------- -------------------  EXCEPTIONS ------------------- ------------------- 
 
 Exception 
-	= op:'!' __ arg: !BooleanLiteral { throw new Error("Error") }
+	= BinComparatorException
+    / op:'!' __ arg: !BooleanLiteral { throw new Error("Error") }
     / SingleComparatorException
 
+BinComparatorException
+	= argl: Number __ op: BinComparator __ argr: !(Number) { throw new Error("ERROR: Invalid comparison") }
+    / argl: BooleanLiteral __ op: BinComparator __ argr: !(BooleanLiteral) { throw new Error("ERROR: Invalid comparison") }
+    / argl: StringLiteral _ op: BinComparator _ argr: !(StringLiteral) { throw new Error("ERROR: Invalid comparison") }
+    / argl: ArrayLiteral _ op: BinComparator _ argr: !(ArrayLiteral) { throw new Error("ERROR: Invalid comparison") }
+    / argl: DictionaryLiteral _ op: BinComparator _ argr: !(DictionaryLiteral) { throw new Error("ERROR: Invalid comparison") }
 
 SingleComparatorException
 	= argl:BooleanLiteral __ op:SingleComparator __ argr:Expression { throw new Error("Error: INVALID OP for BOOLEAN") }
@@ -222,7 +229,7 @@ BooleanLiteral
 //------------------- ------------------- LITERALS - DICTIONARY ------------------- ------------------- 
 DictionaryLiteral 
 	= "{" __ pairs:KeyValueList __ "}" {
-		  return pairs
+		return pairs
     }
     / "{" __ "}" { return { type: "Dictionary", pairs: [] }}
 
@@ -236,7 +243,7 @@ PairKeyValue
 
 // ------------------- -------------------  LITERALS - ARRAY ------------------- ------------------- 
 ArrayLiteral = "[" __ arr:ElementList __ "]" {
-	return arr;
+	return arr
 }
 
 ElementList
