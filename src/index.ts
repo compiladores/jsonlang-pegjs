@@ -1,5 +1,6 @@
-// const peggy = require("peggy");
-// import fs from 'fs'
+const peggy = require("peggy");
+const fs = require('fs').promises;
+
 // var readline = require('readline');
 
 // var rl = readline.createInterface({
@@ -29,11 +30,10 @@
 
 async function executeInt(grammar: any, value: any) {
   try {
-    const peggy = await import('peggy')
     const parser = peggy.generate(grammar);
-    console.log(JSON.stringify(parser.parse(value)));
+    return parser.parse(value);
   } catch (e: any) {
-    console.log(e.message);
+    throw e
   }
 }
 
@@ -45,14 +45,13 @@ export async function getCodeFromFile(fileName: string) {
   })
 }
 
-export async function testGramar(code: any) {
-  const fs = await import("fs");
-  fs.readFile('./src/grammar.pegjs', 'utf-8', (err, grammar) => {
-    if (err) {
-      return console.log(err);
-    }
-    executeInt(grammar, code)
-  })
+export async function testGrammar(code: any) {
+  try {
+    const grammar = await fs.readFile('./src/grammar.pegjs', 'utf-8');
+    return executeInt(grammar, code)
+  } catch (e) {
+    throw e
+  }
 }
 
 

@@ -30,10 +30,7 @@
 Start = __ program:Program __ { return program; }
   
 Program = body:SourceElements? {
-      return {
-        type: "Program",
-        body: optionalList(body)
-      };
+      return optionalList(body)
     }
     
 SourceElements
@@ -60,22 +57,26 @@ Block
     }
     
 AssignmentStatement
-	= type: TypeToken __ id: Identifier __ "=" __ str: StringLiteral {
+	= type: TypeToken __ id: Identifier __ "=" __ str: StringLiteral EOS {
       return {
-        type: getCorrectTypeName(type),
-        id: id,
+        declare: id,
         value: str
       };
     }
+    / id: Identifier __ "=" __ exp: Expression EOS {
+    	return {
+        	set: id,
+            value: exp
+        }
+    }
     / type:TypeToken __ id:Identifier __ "=" __ exp: Expression EOS {
       return {
-        type: getCorrectTypeName(type),
-        id: id,
+        declare: id,
         value: exp
       };
     }
     
-TypeToken = 'var' / 'const'
+TypeToken = 'v'
 EmptyStatement = ";" { return { type: "EmptyStatement" }; }
 
 StatementList
@@ -140,11 +141,30 @@ FunctionExpression
     
 // ------------------- -------------------  EXPRESSIONS ------------------- ------------------- 
 Expression
-	= argl:Term _ op:BinOperator _ argr:Expression { return {op, argl, argr} }
-    / op:UnOperator _ arg:Term _  { return {op, arg} }
+	= Exception
+    // argl: Term _ op: BinComparator _ argr:Expression { return "BinComparator" }
+    / argl:Term _ op:BinOperator _ argr:Expression { return {op, argl, argr} }
+    / op:UnOperator __ arg:Term __  { return {op, arg} }
     / f:FunctionExpression { return f } 
     / a:Term? { return a }
-     
+
+// ------------------- -------------------  EXCEPTIONS ------------------- ------------------- 
+
+Exception 
+	= op:'!' __ arg: !BooleanLiteral { throw new Error("Error") }
+    / SingleComparatorException
+
+
+SingleComparatorException
+	= argl:BooleanLiteral __ op:SingleComparator __ argr:Expression { throw new Error("Error: INVALID OP for BOOLEAN") }
+    / argl:Term __ op:SingleComparator __ argr:BooleanLiteral { throw new Error("Error: INVALID OP for BOOLEAN") }
+    / argl:StringLiteral __ op:SingleComparator __ argr:Expression { throw new Error("Error: INVALID OP for STRING") }
+    / argl:Term __ op:SingleComparator __ argr:StringLiteral { throw new Error("Error: INVALID OP for STRING") } 
+    / argl:ArrayLiteral __ op:SingleComparator __ argr:Expression { throw new Error("Error: INVALID OP for ARRAY") }
+    / argl:Term __ op:SingleComparator __ argr:ArrayLiteral { throw new Error("Error: INVALID OP for ARRAY") }
+    / argl:DictionaryLiteral __ op:SingleComparator __ argr:Expression { throw new Error("Error: INVALID OP for DICTIONARY") }
+    / argl:Term __ op:SingleComparator __ argr:DictionaryLiteral { throw new Error("Error: INVALID OP for DICTIONARY") }
+
 Term 
     = SingleLiteral
     / GroupLiteral
@@ -154,18 +174,35 @@ Term
 Parenthetical "Parenthetical" = '(' e:Expression ')' { return e }
 
 BinOperator
-    = '+' 
+    = BinComparator
+    / SingleComparator
+
+SingleComparator 
+	= '+'
     / '*' 
-    / '-' 
+    / '-'
     / '/' 
-    / '%' 
-    / '&&' 
-    / '||' 
-    / '='
-    / '!='
+    / '^'
+    / '%'
+    / '&'
+    / '>>'
+    / '<<'
+
+    
+BinComparator
+	= '&&' { return 'and' } 
+    / '||' { return 'or' }
+    / '?=' { return '==' }
+    / '!=' { return '~=' }
+    / '<'
+    / '<='
+    / '>'
+    / '>='
     
  UnOperator
- 	= '-' { return 'neg' }
+ 	= '-' { return '-' }
+    / '!' { return '!' }
+    / '~' { return '~' }
 
 // ------------------- -------------------  LITERALS ------------------- ------------------- 
 AllLiterals = SingleLiteral / GroupLiteral
@@ -178,15 +215,14 @@ GroupLiteral = ArrayLiteral / DictionaryLiteral
 //------------------- ------------------- LITERALS - BOOLEANS ------------------- ------------------- 
 BooleanLiteral 
 	= 'true' { return true }
+    / 'TRUE' { return true }
+    / 'FALSE' { return false }
     / 'false' { return false }
 
 //------------------- ------------------- LITERALS - DICTIONARY ------------------- ------------------- 
 DictionaryLiteral 
 	= "{" __ pairs:KeyValueList __ "}" {
-		return { 
-    		type: 'object',
-        	values: pairs
-    	}
+		  return pairs
     }
     / "{" __ "}" { return { type: "Dictionary", pairs: [] }}
 
@@ -200,7 +236,7 @@ PairKeyValue
 
 // ------------------- -------------------  LITERALS - ARRAY ------------------- ------------------- 
 ArrayLiteral = "[" __ arr:ElementList __ "]" {
-	return { arr }
+	return arr;
 }
 
 ElementList
@@ -275,7 +311,7 @@ EscapeCharacter
 WhiteSpace "whitespace" = "\t" / "\v" / "\f" / " " / "\u00A0"/ "\uFEFF"
 LineTerminator= [\n\r\u2028\u2029]
 LineTerminatorSequence "end of line" = "\n" / "\r\n" / "\r" / "\u2028"/ "\u2029"
-Number "Number" = n:[0-9]+ { return n.join('') }
+Number "Number" = n:[0-9]+ { return parseInt(n.join('')) }
 Identifier "Identifier" = !ReservedWord n:[a-zA-Z?]+ { return n.join('') }
 ReservedWord 
 	= 'break' / 'false' / 'true' / 'while' / 'if' 
