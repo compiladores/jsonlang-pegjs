@@ -54,4 +54,17 @@ export async function testGrammar(code: any) {
   }
 }
 
+export async function parseFile(route: string) {
+  try {
+    const grammar = await fs.readFile('./src/grammar.pegjs', 'utf-8');
+    const code = await fs.readFile(`./programs/${route}`, 'utf-8');
+    return executeInt(grammar, code)
+  } catch (e) {
+    throw e
+  }
+}
+
+
+
+
 

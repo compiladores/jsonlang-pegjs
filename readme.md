@@ -10,38 +10,35 @@ y no pude hacer funcionar deno.
 Algunas cosas que se pueden ir probando:
 
 Declarar variables (por ahora con var y const)
-var x = 5;
-const y = 5;
+v x = 5;
+v y = 5;
 
-var z = y + 5;
-const boolVal = false;
+v z = y + 5;
+v boolVal = false;
 
 Arrays
-const x = [1,2,3]
+v x = [1,2,3]
 
 Dictionaries
-const x = { "val": 1, "value": 2 }
+v x = { "val": 1, "value": 2 }
 
 Funciones
-fn foo() <
+f foo() <
     var x = 5;
 >
 
-var y = foo();
+v y = foo();
 y();
 
 Condicional
 <
-  if (5+3) <
-     if () <>
+  i (5+3) <
+     i () <>
   >
   else <
     var x = 5+3;
   >
 >
-
-Return
-  - Todas las funcioens devuelven algo
 
 
 Proximos pasos

@@ -25,6 +25,26 @@
         	return type
     }
   }
+  function getIfElseParsedValue(cond, then, elseValue) {
+  	if (!elseValue) {
+      	return [{
+       		cond, then
+        }]
+    } else {
+    	return [{
+        	cond, then, else: elseValue
+        }]
+    }
+  }
+
+  function checkReservedWord(word) {
+    const reservedWords = ['b', 'false' , 'true', 'w', 'i', 'fr', 'v', 'continue', 
+                'return', 'function', 'print'] 
+    if (reservedWords.includes(word)) throw new Error('ERROR: Reserved word (' + word + ")");
+    else return word;
+  }
+  
+  let blocks = 0;
 }}
 
 Start = __ program:Program __ { return program; }
@@ -51,17 +71,20 @@ Statement
 
 Block
   = "<" __ body:(StatementList __)? ">" {
-      return {
-        type: "BlockStatement",
-        body: optionalList(extractOptional(body, 0))
-      };
+      return optionalList(extractOptional(body, 0))
     }
     
 AssignmentStatement
-	= type: TypeToken __ id: Identifier __ "=" __ str: StringLiteral EOS {
+	= 'v' ___ id: Identifier __ "=" __ str: StringLiteral EOS {
       return {
         declare: id,
         value: str
+      };
+    }
+    / 'v' ___ id:Identifier __ "=" __ exp: Expression EOS {
+      return {
+        declare: id,
+        value: exp
       };
     }
     / id: Identifier __ "=" __ exp: Expression EOS {
@@ -70,15 +93,8 @@ AssignmentStatement
             value: exp
         }
     }
-    / type:TypeToken __ id:Identifier __ "=" __ exp: Expression EOS {
-      return {
-        declare: id,
-        value: exp
-      };
-    }
     
-TypeToken = 'v'
-EmptyStatement = ";" { return { type: "EmptyStatement" }; }
+EmptyStatement = ";" { return null; }
 
 StatementList
   = head:Statement tail:(__ Statement)* { return buildList(head, tail, 1); }
@@ -86,32 +102,27 @@ StatementList
 // --------------------------- --------------- RETURN -----------------------------------------    
 ReturnStatement
   = 'r' EOS {
-      return { type: "ReturnStatement", argument: null };
+      return { return: null };
     }
   / 'r' _ argument:Expression EOS {
       return { return: argument };
     }
 // --------------------------- --------------- IF -----------------------------------------    
 IfStatement
-  = 'if' __ "(" __ cond:Expression __ ")" __
+  = 'i' __ "(" __ cond:Expression __ ")" __
     next:Statement __
-    'else' __
+    'e' __
     elseStmt:Statement
     {
       return {
-        type: "IfElse",
-        condition: cond,
-        next: next,
-        elseStmt: elseStmt
+		if: getIfElseParsedValue(cond, next, elseStmt),
+        
       };
     }
-  / 'if' __ "(" __ cond:Expression __ ")" __
+  / 'i' __ "(" __ cond:Expression __ ")" __
     next:Statement {
       return {
-        type: "If",
-        cond: cond,
-        next: next,
-        alternate: null
+        if: getIfElseParsedValue(cond, next, null)
       };
     }
 
@@ -123,10 +134,9 @@ Function
     "<" __ body:FunctionBody __ ">"
     {
       return {
-        type: "function",
-        id: id,
-        params: optionalList(extractOptional(params, 0)),
-        body: body
+        "function": id,
+        args: optionalList(extractOptional(params, 0)),
+        block: body
       };
     }
  
@@ -134,18 +144,20 @@ FunctionParams
 	= first: Identifier following:(__ "," __ Identifier)* {
     	return buildList(first, following, 3);
     }
+    
+FunctionCallParams
+	= first: Term following:(__ "," __ Term)* {
+    	return buildList(first, following, 3);
+    }
 
 FunctionBody 
 	= body: SourceElements? {
-    	return {
-        	type: "FunctionBody",
-            body: optionalList(body)
-        }
+    	return optionalList(body)
     }
  
 FunctionExpression 
-	= id:Identifier __  "(" __ ")" __ EOS {
-    	return { type: 'FunctionCall', call: id }
+	= id:Identifier __  "(" params:(FunctionCallParams __)? ")" __ EOS {
+    	return { call: id, args: optionalList(extractOptional(params, 0)) }
     }
     
 // ------------------- -------------------  EXPRESSIONS ------------------- ------------------- 
@@ -304,12 +316,7 @@ SingleEscapeCharacter
   = "'"
   / '"'
   / "\\"
-  / "b"  { return "\b"; }
-  / "f"  { return "\f"; }
-  / "n"  { return "\n"; }
-  / "r"  { return "\r"; }
-  / "t"  { return "\t"; }
-  / "v"  { return "\v"; }
+
   
 LineContinuation
   = "\\" LineTerminatorSequence { return ""; }
@@ -322,19 +329,24 @@ EscapeCharacter
   / "."
   / "x"
   / "u"
- 
+  
+// ------------------- ------------------- Identifier ------------------- -------------------
+Identifier       = ! (ReservedWord Alone) IdentifierStart IdentifierPart*
+                   { return text() } /* makes control statements callable */
+IdentifierStart = [$_a-zA-Z]
+IdentifierPart  = [$_a-zA-Z0-9] 
+Alone = ! IdentifierPart
 // ------------------- ------------------- AUX ------------------- ------------------- 
 WhiteSpace "whitespace" = "\t" / "\v" / "\f" / " " / "\u00A0"/ "\uFEFF"
 LineTerminator= [\n\r\u2028\u2029]
 LineTerminatorSequence "end of line" = "\n" / "\r\n" / "\r" / "\u2028"/ "\u2029"
 Number "Number" = n:[0-9]+ { return parseInt(n.join('')) }
-Identifier "Identifier" = !ReservedWord n:[a-zA-Z?]+ { return n.join('') }
-ReservedWord 
-	= 'break' / 'false' / 'true' / 'while' / 'if' 
-    / 'for' / 'var' / 'const' / 'continue' / 'return'
-    / 'function' / 'print'
+ReservedWord
+  = Keyword / 'null' / BooleanLiteral
+Keyword = 'b' / 'c' / 'e' / 'fr' / 'fn' / 'i' / 'r' / 'v' / 'w' 
 Terminator "Terminator" = LineTerminator / ';'
 SourceCharacter = .
+___ = (WhiteSpace)+
 _ = (WhiteSpace)*
 __ = (WhiteSpace / LineTerminatorSequence)*
 EOS = __ ";" / _ LineTerminatorSequence / _ &"}" / __ EOF
