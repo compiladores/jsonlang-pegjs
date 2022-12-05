@@ -9,7 +9,7 @@ describe('Tipos test', () => {
       {
         declare: 'out',
         value: {
-          op: '-',
+          unop: '-',
           arg: 5
         }
       }
@@ -24,7 +24,7 @@ describe('Tipos test', () => {
       {
         declare: 'out',
         value: {
-          op: '~',
+          unop: '~',
           arg: 5 
         }
       }
@@ -39,7 +39,7 @@ describe('Tipos test', () => {
       {
         declare: 'out',
         value: {
-          op: '!',
+          unop: '!',
           arg: true
         }
       }

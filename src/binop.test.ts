@@ -8,7 +8,7 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '+',
+          binop: '+',
           argl: 1,
           argr: 2
         }
@@ -24,7 +24,7 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '-',
+          binop: '-',
           argl: 1,
           argr: 2
         }
@@ -40,7 +40,7 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '*',
+          binop: '*',
           argl: 1,
           argr: 2
         }
@@ -56,7 +56,7 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '/',
+          binop: '/',
           argl: 1,
           argr: 2
         }
@@ -72,9 +72,9 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '+',
+          binop: '+',
           argl: {
-            op: '*',
+            binop: '*',
             argl: 3,
             argr: 2
           },
@@ -92,9 +92,9 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '+',
+          binop: '+',
           argl: {
-            op: '*',
+            binop: '*',
             argl: 'x',
             argr: 'y'
           },
@@ -112,10 +112,10 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '+',
+          binop: '+',
           argl: 'z',
           argr: {
-            op: '*',
+            binop: '*',
             argl: 'x',
             argr: 'y'
           }
@@ -207,7 +207,7 @@ describe('Binops test', () => {
       {
         declare: 'x',
         value: {
-          op: '==',
+          binop: '==',
           argl: false,
           argr: true
         }
@@ -230,7 +230,7 @@ describe('Binops test', () => {
       {
         declare: 'x',
         value: {
-          op: '==',
+          binop: '==',
           argl: 1,
           argr: 1
         }
@@ -259,7 +259,7 @@ describe('Binops test', () => {
       {
         declare: 'x',
         value: {
-          op: '==',
+          binop: '==',
           argl: "String",
           argr: "Otro"
         }
@@ -281,7 +281,7 @@ describe('Binops test', () => {
       {
         declare: 'x',
         value: {
-          op: '==',
+          binop: '==',
           argl: [1,2,3],
           argr: [1,2,3,4]
         }
@@ -303,7 +303,7 @@ describe('Binops test', () => {
       {
         declare: 'x',
         value: {
-          op: '==',
+          binop: '==',
           argl: [
             { 
               key: "Hola",
@@ -329,24 +329,24 @@ describe('Binops test', () => {
       {
         declare: 'out',
         value: {
-          op: '*',
+          binop: '*',
           argl: {
-            op: '+',
+            binop: '+',
             argl: 'x',
             argr: {
-              op: '+',
+              binop: '+',
               argl: 'y',
               argr: 5
             }
           },
           argr: {
-            op: '-',
+            binop: '-',
             argl: 'y',
             argr: {
-              op: '+',
+              binop: '+',
               argl: 'z',
               argr: {
-                op: '|',
+                binop: '|',
                 argl: 2,
                 argr: 3
               }

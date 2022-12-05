@@ -67,6 +67,7 @@ Statement
     / EmptyStatement
     / FunctionExpression
     / IfStatement
+    / WhileStatement
    
 
 Block
@@ -98,7 +99,13 @@ EmptyStatement = ";" { return null; }
 
 StatementList
   = head:Statement tail:(__ Statement)* { return buildList(head, tail, 1); }
-  
+
+// --------------------------- --------------- LOOPS - WHILE -----------------------------------------   
+
+WhileStatement = 'w' __ "(" __ cond:Expression __ ")" __
+    block:Statement
+    { return { while: cond, do: block }}
+
 // --------------------------- --------------- RETURN -----------------------------------------    
 ReturnStatement
   = 'r' EOS {
@@ -163,8 +170,8 @@ FunctionExpression
 // ------------------- -------------------  EXPRESSIONS ------------------- ------------------- 
 Expression
 	= Exception
-    / argl:Term _ op:BinOperator _ argr:Expression { return {op, argl, argr} }
-    / op:UnOperator __ arg:Term __  { return {op, arg} }
+    / argl:Term _ binop:BinOperator _ argr:Expression { return {binop, argl, argr} }
+    / unop:UnOperator __ arg:Term __  { return {unop, arg} }
     / f:FunctionExpression { return f } 
     / a:Term? { return a }
 
@@ -332,7 +339,7 @@ EscapeCharacter
   
 // ------------------- ------------------- Identifier ------------------- -------------------
 Identifier       = ! (ReservedWord Alone) IdentifierStart IdentifierPart*
-                   { return text() } /* makes control statements callable */
+                   { return text() }
 IdentifierStart = [$_a-zA-Z]
 IdentifierPart  = [$_a-zA-Z0-9] 
 Alone = ! IdentifierPart

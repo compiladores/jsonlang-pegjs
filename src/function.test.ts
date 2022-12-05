@@ -44,7 +44,7 @@ describe('Function test', () => {
         block: [
           {
             return: {
-              op: '+',
+              binop: '+',
               argl: 'x',
               argr: 5
             }

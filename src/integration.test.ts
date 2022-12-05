@@ -32,7 +32,7 @@ describe('Function test', () => {
 					},
 					{
 						return: {
-							op: '+',
+							binop: '+',
 							argl: 'x',
 							argr: 'y'
 						}
@@ -58,7 +58,7 @@ describe('Function test', () => {
 				block: [
 					{
 						return: {
-							op: '+',
+							binop: '+',
 							argl: 'x',
 							argr: 'y'
 						}
@@ -85,6 +85,71 @@ describe('Function test', () => {
 				]
 			}
 		]
+
+		expect(res).toStrictEqual(resObject);
+	})
+	test('004', async () => {
+		const res = await parseFile('p04.red')
+
+		const resObject = [
+			{
+			  function: 'main',
+			  args: [],
+			  block: [
+				{
+				  if: [
+					{
+					  cond: {
+						binop: '>',
+						argl: 'x',
+						argr: 5
+					  },
+					  then: [
+						{
+						  if: [
+							{
+							  cond: {
+								binop: '==',
+								argl: 'x',
+								argr: 6
+							  },
+							  then: [
+								{
+								  if: [
+									{
+									  cond: {
+										binop: 'and',
+										argl: {
+										  binop: '==',
+										  argl: 'x',
+										  argr: 7
+										},
+										argr: {
+										  binop: '<',
+										  argl: 'x',
+										  argr: 8
+										}
+									  },
+									  then: [
+										{
+										  set: 'x',
+										  value: 8
+										}
+									  ]
+									}
+								  ]
+								}
+							  ]
+							}
+						  ]
+						}
+					  ]
+					}
+				  ]
+				}
+			  ]
+			}
+		  ]
 
 		expect(res).toStrictEqual(resObject);
 	})

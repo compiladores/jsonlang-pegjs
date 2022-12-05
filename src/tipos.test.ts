@@ -69,7 +69,7 @@ describe('Tipos test', () => {
       {
         declare: 'negated',
         value: {
-          op: '!',
+          unop: '!',
           arg: 'boolvar'
         }
       }

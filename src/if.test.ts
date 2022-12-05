@@ -9,7 +9,7 @@ describe('Function test', () => {
 				if: [
 					{
 						cond: {
-							op: '>',
+							binop: '>',
 							argl: 'x',
 							argr: 5
 						},
@@ -30,7 +30,7 @@ describe('Function test', () => {
 				if: [
 					{
 						cond: {
-							op: '>',
+							binop: '>',
 							argl: 'x',
 							argr: 5
 						},
@@ -52,7 +52,7 @@ describe('Function test', () => {
 				if: [
 					{
 						cond: {
-							op: '>',
+							binop: '>',
 							argl: 'x',
 							argr: 5
 						},
@@ -61,7 +61,7 @@ describe('Function test', () => {
 								if: [
 									{
 										cond: {
-											op: '>',
+											binop: '>',
 											argl: 'x',
 											argr: 6
 										},
