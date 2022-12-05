@@ -47,12 +47,10 @@ describe('Tipos test', () => {
     expect(res).toStrictEqual(resObject);
   })
 
-  test('Negate not bool should throw test', async () => {
-    try {
-      await testGrammar('v out = !5;')
-    } catch (e) {
-      expect(e).toThrow('Error, not a boolean');
-    }
+  test('Negate not bool should throw test', async () =>  {        
+    await expect(testGrammar('v out = !5;'))
+    .rejects
+    .toThrow('ERROR: Negated value must be boolean or an identifier');
   });
 
 })

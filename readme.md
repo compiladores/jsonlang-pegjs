@@ -40,10 +40,15 @@ Condicional
   >
 >
 
+Return
+  - Todas las funcioens devuelven algo
+
+
 Proximos pasos
 -  Testing
 -  Reserved words
 -  While, For
 -  Break y continue
 -  Return
+
 

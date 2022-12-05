@@ -1,7 +1,6 @@
 import { testGrammar } from ".";
 
 describe('Binops test', () => {
-
   test('Add binop test', async () => {
     const res = await testGrammar('v out = 1 + 2;');
 
@@ -317,6 +316,42 @@ describe('Binops test', () => {
               value: 1
             }
           ]
+        }
+      }
+    ]
+    expect(res).toStrictEqual(resObject);
+  })
+
+  test('Multiple operations', async () => {
+    const res = await testGrammar('v out = (x+y+5) * (y-z+2|3)');
+
+    const resObject = [
+      {
+        declare: 'out',
+        value: {
+          op: '*',
+          argl: {
+            op: '+',
+            argl: 'x',
+            argr: {
+              op: '+',
+              argl: 'y',
+              argr: 5
+            }
+          },
+          argr: {
+            op: '-',
+            argl: 'y',
+            argr: {
+              op: '+',
+              argl: 'z',
+              argr: {
+                op: '|',
+                argl: 2,
+                argr: 3
+              }
+            }
+          }
         }
       }
     ]

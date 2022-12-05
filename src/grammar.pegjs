@@ -43,6 +43,7 @@ SourceElement = Statement / Function
 Statement
 	= Block
     / AssignmentStatement
+    / ReturnStatement
     / EmptyStatement
     / FunctionExpression
     / IfStatement
@@ -81,7 +82,15 @@ EmptyStatement = ";" { return { type: "EmptyStatement" }; }
 
 StatementList
   = head:Statement tail:(__ Statement)* { return buildList(head, tail, 1); }
-    
+  
+// --------------------------- --------------- RETURN -----------------------------------------    
+ReturnStatement
+  = 'r' EOS {
+      return { type: "ReturnStatement", argument: null };
+    }
+  / 'r' _ argument:Expression EOS {
+      return { return: argument };
+    }
 // --------------------------- --------------- IF -----------------------------------------    
 IfStatement
   = 'if' __ "(" __ cond:Expression __ ")" __
@@ -115,7 +124,7 @@ Function
     {
       return {
         type: "function",
-        id: id[0],
+        id: id,
         params: optionalList(extractOptional(params, 0)),
         body: body
       };
@@ -142,7 +151,6 @@ FunctionExpression
 // ------------------- -------------------  EXPRESSIONS ------------------- ------------------- 
 Expression
 	= Exception
-    // argl: Term _ op: BinComparator _ argr:Expression { return "BinComparator" }
     / argl:Term _ op:BinOperator _ argr:Expression { return {op, argl, argr} }
     / op:UnOperator __ arg:Term __  { return {op, arg} }
     / f:FunctionExpression { return f } 
@@ -152,7 +160,7 @@ Expression
 
 Exception 
 	= BinComparatorException
-    / op:'!' __ arg: !BooleanLiteral { throw new Error("Error") }
+    / op:'!' __ arg: !(Identifier / BooleanLiteral) { throw new Error("ERROR: Negated value must be boolean or an identifier") }
     / SingleComparatorException
 
 BinComparatorException
@@ -194,6 +202,7 @@ SingleComparator
     / '&'
     / '>>'
     / '<<'
+    / '|'
 
     
 BinComparator
