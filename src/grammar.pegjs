@@ -1,29 +1,22 @@
 {{
   function filledArray(count, value) {
-    return Array.apply(null, new Array(count))
-      .map(function() { return value; });
+    var arr = []
+    for (var i=0; i<count; i++) {
+      arr.push(value)
+    }
+    return arr;
   }
   function extractOptional(optional, index) {
     return optional ? optional[index] : null;
   }
   function extractList(list, index) {
-    return list.map(function(element) { return element[index]; });
+    return list.map((element) => { return element[index]; });
   }
   function buildList(head, tail, index) {
     return [head].concat(extractList(tail, index));
   }
   function optionalList(value) {
     return value !== null ? value : [];
-  }
-  function getCorrectTypeName(type) {
-  	switch (type) {
-    	case '[]': 
-        	return "array"
-        case '{}':
-        	return "dictionary"
-        default:
-        	return type
-    }
   }
   function getIfElseParsedValue(cond, then, elseValue) {
   	if (!elseValue) {
@@ -43,8 +36,6 @@
     if (reservedWords.includes(word)) throw new Error('ERROR: Reserved word (' + word + ")");
     else return word;
   }
-  
-  let blocks = 0;
 }}
 
 Start = __ program:Program __ { return program; }
@@ -54,8 +45,8 @@ Program = body:SourceElements? {
     }
     
 SourceElements
-  = head:SourceElement tail:(__ SourceElement)* {
-      return buildList(head, tail, 1);
+  = first:SourceElement following:(__ SourceElement)* {
+      return buildList(first, following, 1);
     }
 
 SourceElement = Statement / Function
@@ -67,7 +58,11 @@ Statement
     / EmptyStatement
     / FunctionExpression
     / IfStatement
+    / DoWhileStatement
     / WhileStatement
+    / ForStatement
+    / ContinueStatement
+    / BreakStatement
    
 
 Block
@@ -94,7 +89,13 @@ AssignmentStatement
             value: exp
         }
     }
-    
+    / id: AccessIdentifier __ "=" __ exp: Expression EOS {
+    	return {
+        	set: id, 
+            value: exp
+        }
+    }
+        
 EmptyStatement = ";" { return null; }
 
 StatementList
@@ -105,6 +106,35 @@ StatementList
 WhileStatement = 'w' __ "(" __ cond:Expression __ ")" __
     block:Statement
     { return { while: cond, do: block }}
+// --------------------------- --------------- LOOPS - FOR -----------------------------------------       
+
+ForStatement = 'f' __
+    "(" __
+    iterator:Identifier __ (";" / ",") __
+    from: Expression __ (";" / ",") __
+    to: Expression
+    ")" __
+    block:Statement
+    {
+      return {
+        iterator, from, to, do: block
+      };
+    }
+    
+// --------------------------- --------------- LOOPS - DO WHILE ----------------------------------------- 
+DoWhileStatement 
+	= 'du' __
+    body:Statement __
+    "(" __ cond:Expression __ ")" EOS
+    { return { do: body, until: cond }; }
+    
+// --------------------------- --------------- BREAK - CONTINUE -----------------------------------------   
+
+ContinueStatement
+  = 'c' EOS { return "continue"; }
+
+BreakStatement
+  = 'b' EOS { return "break"; }
 
 // --------------------------- --------------- RETURN -----------------------------------------    
 ReturnStatement
@@ -138,7 +168,7 @@ IfStatement
 Function
   = 'fn' __ id:Identifier __
     "(" __ params:(FunctionParams __)? ")" __
-    "<" __ body:FunctionBody __ ">"
+    "<" __ body:FunctionBody __ ">" EOS
     {
       return {
         "function": id,
@@ -163,7 +193,7 @@ FunctionBody
     }
  
 FunctionExpression 
-	= id:Identifier __  "(" params:(FunctionCallParams __)? ")" __ EOS {
+	= id:Identifier __  "(" params:(FunctionCallParams __)? ")" __ EOS? {
     	return { call: id, args: optionalList(extractOptional(params, 0)) }
     }
     
@@ -203,7 +233,12 @@ Term
     = SingleLiteral
     / GroupLiteral
     / Parenthetical
+	/ AccessIdentifier
     / Identifier
+    
+AccessIdentifier
+	= id:Identifier "." "gk" __ "(" __ e:Expression __")"__ { return {id, key: e}}
+    / id:Identifier "[" n:Expression "]" { return { id, pos: n }}
     
 Parenthetical "Parenthetical" = '(' e:Expression ')' { return e }
 
@@ -243,10 +278,14 @@ BinComparator
 AllLiterals = SingleLiteral / GroupLiteral
 SingleLiteral 
 	= Number 
-    / StringLiteral 
-    /  BooleanLiteral
+  / StringLiteral 
+  / BooleanLiteral
+  / NullLiteral
+  
 GroupLiteral = ArrayLiteral / DictionaryLiteral
 
+//------------------- ------------------- LITERALS - NULL ------------------- ------------------- 
+NullLiteral = 'null' { return null }
 //------------------- ------------------- LITERALS - BOOLEANS ------------------- ------------------- 
 BooleanLiteral 
 	= 'true' { return true }
@@ -259,7 +298,7 @@ DictionaryLiteral
 	= "{" __ pairs:KeyValueList __ "}" {
 		return pairs
     }
-    / "{" __ "}" { return { type: "Dictionary", pairs: [] }}
+    / "{" __ "}" { return []}
 
 KeyValueList
   = head:PairKeyValue tail:(__ "," __ PairKeyValue)* {
@@ -267,7 +306,7 @@ KeyValueList
     }
     
 PairKeyValue
-	= key: StringLiteral __ ":" __ value: AllLiterals { return {key, value} }
+	= key: StringLiteral __ ":" __ value: Expression { return {key, value} }
 
 // ------------------- -------------------  LITERALS - ARRAY ------------------- ------------------- 
 ArrayLiteral = "[" __ arr:ElementList __ "]" {
@@ -275,28 +314,28 @@ ArrayLiteral = "[" __ arr:ElementList __ "]" {
 }
 
 ElementList
-  = head:(
-      elision:(Elision __)? element:SingleLiteral {
-        return optionalList(extractOptional(elision, 0)).concat(element);
+  = first:(
+      sep:(Separator __)? element: Expression {
+        return optionalList(extractOptional(sep, 0)).concat(element);
       }
     )
-    tail:(
-      __ "," __ elision:(Elision __)? element:SingleLiteral {
-        return optionalList(extractOptional(elision, 0)).concat(element);
+    following:(
+      __ "," __ sep:(Separator __)? element:Expression {
+        return optionalList(extractOptional(sep, 0)).concat(element);
       }
     )*
-    { return Array.prototype.concat.apply(head, tail); }
+    { return Array.prototype.concat.apply(first, following); }
 
-Elision
+Separator
   = "," commas:(__ ",")* { return filledArray(commas.length + 1, null); }
 
 // ------------------- -------------------  LITERALS - STRING ------------------- ------------------- 
 StringLiteral "string"
   = '"' chars:DoubleStringCharacter* '"' {
-      return chars.join("");
+      return { literal: chars.join("") };
     }
   / "'" chars:SingleStringCharacter* "'" {
-      return { type: "Literal", value: chars.join("") };
+      return { literal: chars.join("") };
     }
 
 DoubleStringCharacter
@@ -350,11 +389,11 @@ LineTerminatorSequence "end of line" = "\n" / "\r\n" / "\r" / "\u2028"/ "\u2029"
 Number "Number" = n:[0-9]+ { return parseInt(n.join('')) }
 ReservedWord
   = Keyword / 'null' / BooleanLiteral
-Keyword = 'b' / 'c' / 'e' / 'fr' / 'fn' / 'i' / 'r' / 'v' / 'w' 
+Keyword = 'b' / 'c' / 'e' / 'f' / 'fn' / 'i' / 'r' / 'v' / 'w' 
 Terminator "Terminator" = LineTerminator / ';'
 SourceCharacter = .
 ___ = (WhiteSpace)+
 _ = (WhiteSpace)*
 __ = (WhiteSpace / LineTerminatorSequence)*
-EOS = __ ";" / _ LineTerminatorSequence / _ &"}" / __ EOF
+EOS = __ ";" / _ LineTerminatorSequence / _ &">" / __ EOF
 EOF = !.

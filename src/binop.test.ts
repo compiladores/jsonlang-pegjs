@@ -260,8 +260,8 @@ describe('Binops test', () => {
         declare: 'x',
         value: {
           binop: '==',
-          argl: "String",
-          argr: "Otro"
+          argl: { literal: "String" },
+          argr: { literal: "Otro" }
         }
       }
     ]
@@ -306,13 +306,13 @@ describe('Binops test', () => {
           binop: '==',
           argl: [
             { 
-              key: "Hola",
+              key: { literal: "Hola" },
               value: 1
             }
           ],
           argr: [
             { 
-              key: "Hola",
+              key: { literal: "Hola" },
               value: 1
             }
           ]
@@ -363,4 +363,25 @@ describe('Binops test', () => {
     .rejects
     .toThrow('ERROR: Invalid comparison');
   });
+
+  test('Multiple operations', async () => {
+    const res = await testGrammar('v x = 2^(3^2)');
+
+    const resObject = [
+      {
+        declare: 'x',
+        value: {
+          binop: '^',
+          argl: 2,
+          argr: {
+            binop: '^',
+            argl: 3,
+            argr: 2
+          }
+        }
+      }
+    ]
+    expect(res).toStrictEqual(resObject);
+  })
+
 });

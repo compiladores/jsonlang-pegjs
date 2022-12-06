@@ -74,7 +74,7 @@ describe('Function test', () => {
 				set: 'var',
 				value: {
 					call: 'foo',
-					args: ['x', 'y', 'z', 10, "Hola"]
+					args: ['x', 'y', 'z', 10, { literal: "Hola" }]
 				}
 			},
 		]
